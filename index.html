@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sunil Obi — DevOps &amp; Platform Engineering</title>
+<style>
+  :root{
+    --bg:#0B0F14;
+    --panel:#121820;
+    --panel-2:#161E27;
+    --line:#26313C;
+    --text:#E7EDF2;
+    --muted:#8B98A5;
+    --amber:#E8A33D;
+    --teal:#4AA6A0;
+    --mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+    --sans: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{ scroll-behavior:smooth; }
+  body{
+    background:var(--bg); color:var(--text); font-family:var(--sans);
+    line-height:1.5; -webkit-font-smoothing:antialiased; overflow-x:hidden;
+  }
+  ::selection{ background:var(--amber); color:#101418; }
+  a{ color:inherit; }
+  button{ font-family:inherit; }
+
+  /* ---------------- top bar (persistent chrome) ---------------- */
+  .topbar{
+    position:fixed; top:0; left:0; right:0; height:64px; z-index:100;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 6vw; border-bottom:1px solid var(--line);
+    background:rgba(11,15,20,.86); backdrop-filter:blur(10px);
+  }
+  .brand{ font-family:var(--mono); font-size:13px; letter-spacing:.06em; cursor:pointer; display:flex; align-items:center; gap:10px;}
+  .brand-dot{ width:7px; height:7px; border-radius:50%; background:var(--teal); box-shadow:0 0 8px var(--teal); }
+  .crumbs{ font-family:var(--mono); font-size:12px; color:var(--muted); display:flex; align-items:center; gap:8px; }
+  .crumbs .cur{ color:var(--amber); }
+  .back-btn{
+    display:none; align-items:center; gap:8px; background:none; border:1px solid var(--line);
+    color:var(--text); font-family:var(--mono); font-size:12.5px; padding:8px 14px; cursor:pointer;
+    transition:border-color .2s, transform .15s;
+  }
+  .back-btn:hover{ border-color:var(--amber); }
+  .back-btn.show{ display:inline-flex; }
+  .navlinks{ display:flex; gap:22px; font-family:var(--mono); font-size:12.5px; color:var(--muted); }
+  .navlinks button{ background:none; border:none; color:inherit; cursor:pointer; padding:0; }
+  .navlinks button:hover{ color:var(--text); }
+  @media (max-width:760px){ .navlinks{display:none;} }
+
+  /* ---------------- view container ---------------- */
+  .stage{ padding-top:64px; min-height:100vh; position:relative; }
+  .view{
+    display:none;
+    animation: viewIn .5s cubic-bezier(.16,1,.3,1);
+  }
+  .view.active{ display:block; }
+  @keyframes viewIn{
+    from{ opacity:0; transform:translateY(16px) scale(.99); }
+    to{ opacity:1; transform:translateY(0) scale(1); }
+  }
+  @media (prefers-reduced-motion: reduce){ .view{ animation:none; } }
+
+  section{ padding:80px 8vw 110px; }
+  .section-inner{ max-width:1040px; margin:0 auto; }
+  .eyebrow{ font-family:var(--mono); font-size:12px; color:var(--teal); letter-spacing:.08em; margin-bottom:18px; display:flex; align-items:center; gap:10px; }
+  .eyebrow .dash{ width:24px; height:1px; background:var(--teal); display:inline-block; }
+  h1,h2,h3{ font-weight:800; letter-spacing:-0.02em; }
+  h2{ font-size:clamp(28px,3.4vw,42px); margin-bottom:20px; max-width:20ch; }
+  p.lede{ color:var(--muted); font-size:17px; max-width:62ch; }
+
+  /* ---------------- HOME ---------------- */
+  #view-home section{ border-bottom:1px solid var(--line); }
+  .hero{ min-height:calc(100vh - 64px); display:flex; flex-direction:column; justify-content:center; }
+  .status-line{ font-family:var(--mono); font-size:13px; color:var(--teal); margin-bottom:28px; display:flex; align-items:center; gap:10px; }
+  .status-dot{ width:8px; height:8px; border-radius:50%; background:var(--teal); box-shadow:0 0 10px var(--teal); animation:pulse 2s infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.35;} }
+  .hero-name{ font-size:clamp(42px,7vw,84px); line-height:.98; margin-bottom:8px; }
+  .hero-role{ font-family:var(--mono); font-size:clamp(14px,1.8vw,19px); color:var(--amber); margin-bottom:36px; }
+  .hero-desc{ max-width:56ch; color:var(--muted); font-size:18px; margin-bottom:44px; }
+
+  .domain-row{ display:flex; flex-wrap:wrap; border-top:1px solid var(--line); }
+  .domain{ flex:1; min-width:180px; padding:26px 20px; border-right:1px solid var(--line); cursor:pointer; transition:background .2s; position:relative; }
+  .domain:last-child{ border-right:none; }
+  .domain:hover{ background:var(--panel); }
+  .domain:hover .domain-arrow{ transform:translateX(4px); opacity:1; }
+  .domain-k{ font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:.1em; }
+  .domain-name{ font-size:19px; font-weight:700; margin:6px 0 6px; }
+  .domain-sub{ font-size:13px; color:var(--muted); }
+  .domain-arrow{ position:absolute; right:20px; top:26px; color:var(--amber); font-family:var(--mono); opacity:.4; transition:.2s; }
+
+  /* nested "enter" cards grid on home */
+  .enter-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); margin-top:36px; }
+  .enter-card{
+    background:var(--bg); padding:30px 26px; cursor:pointer; transition:background .2s;
+    display:flex; flex-direction:column; justify-content:space-between; min-height:170px;
+  }
+  .enter-card:hover{ background:var(--panel); }
+  .enter-card:hover .go{ transform:translateX(4px); }
+  .enter-top{ font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:.08em; margin-bottom:14px; }
+  .enter-card h3{ font-size:21px; margin-bottom:10px; }
+  .enter-card p{ font-size:14px; color:var(--muted); margin-bottom:18px; }
+  .go{ font-family:var(--mono); font-size:12.5px; color:var(--amber); display:inline-flex; align-items:center; gap:6px; transition:transform .2s; }
+
+  /* ---------------- shared bits reused in detail views ---------------- */
+  .capability-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); margin-top:40px; }
+  .capability{ background:var(--bg); padding:26px 22px; }
+  .capability-n{ font-family:var(--mono); color:var(--amber); font-size:13px; margin-bottom:10px; }
+  .capability h4{ font-size:16px; margin-bottom:8px; }
+  .capability p{ font-size:14px; color:var(--muted); }
+
+  .timeline{ margin-top:20px; }
+  .era{ display:grid; grid-template-columns:160px 1fr; gap:32px; padding:36px 0; border-top:1px solid var(--line); cursor:pointer; transition:background .2s; }
+  .era:hover{ background:var(--panel); }
+  .era:last-child{ border-bottom:1px solid var(--line); }
+  .era-years{ font-family:var(--mono); color:var(--muted); font-size:13px; padding-top:4px; }
+  .era-org{ font-size:22px; font-weight:800; margin-bottom:4px; display:flex; align-items:center; gap:10px; }
+  .era-title{ color:var(--amber); font-family:var(--mono); font-size:13px; margin-bottom:14px; }
+  .era-summary{ color:var(--muted); font-size:15px; max-width:60ch; margin-bottom:18px; }
+  .tag-row{ display:flex; flex-wrap:wrap; gap:8px; }
+  .tag{ font-family:var(--mono); font-size:11.5px; color:var(--text); border:1px solid var(--line); padding:4px 10px; border-radius:3px; background:var(--panel); }
+  .era-more{ font-family:var(--mono); font-size:12px; color:var(--amber); opacity:.7; }
+
+  .case-header{ display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px; margin-bottom:36px; }
+  .case-tag{ font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--line); padding:5px 10px; }
+  .schematic{ border:1px solid var(--line); background:var(--panel); padding:28px; display:flex; flex-direction:column; overflow-x:auto; }
+  .schem-row{ display:flex; justify-content:center; gap:14px; flex-wrap:wrap; padding:10px 0; }
+  .node{ font-family:var(--mono); font-size:12.5px; text-align:center; border:1px solid var(--line); background:var(--bg); padding:12px 14px; cursor:pointer; min-width:110px; transition:border-color .2s, background .2s; }
+  .node:hover, .node.open{ border-color:var(--amber); background:var(--panel-2); }
+  .node.hub{ border-color:var(--teal); color:var(--teal); font-weight:700; }
+  .connector{ text-align:center; color:var(--line); font-family:var(--mono); font-size:14px; line-height:1; padding:2px 0; }
+  .node-detail{ display:none; background:var(--bg); border:1px solid var(--amber); padding:16px 18px; font-size:13.5px; color:var(--muted); margin:8px auto 0; max-width:640px; }
+  .node-detail.show{ display:block; }
+
+  .matrix{ width:100%; border-collapse:collapse; margin-top:8px; font-size:14px; }
+  .matrix th{ text-align:left; font-family:var(--mono); font-size:11.5px; color:var(--muted); font-weight:500; padding:10px 14px; border-bottom:1px solid var(--line); }
+  .matrix td{ padding:14px; border-bottom:1px solid var(--line); vertical-align:top; }
+  .matrix tr:hover td{ background:var(--panel); }
+  .sym{ font-weight:600; color:var(--text); }
+  .path{ color:var(--muted); font-family:var(--mono); font-size:12.5px; }
+  .split{ display:grid; grid-template-columns:1fr 1fr; gap:40px; margin-top:40px; }
+  @media (max-width:760px){ .split{ grid-template-columns:1fr; } }
+  .split h4{ font-size:15px; margin-bottom:14px; color:var(--amber); font-family:var(--mono); }
+
+  .stack-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); margin-top:36px; }
+  .stack-cat{ background:var(--bg); padding:24px; }
+  .stack-cat h4{ font-family:var(--mono); font-size:12px; color:var(--teal); letter-spacing:.06em; margin-bottom:14px; }
+  .stack-items{ display:flex; flex-wrap:wrap; gap:8px; }
+  .stack-item{ font-size:13.5px; border:1px solid var(--line); padding:5px 10px; }
+
+  /* ---------------- CONTACT (nested detail page) ---------------- */
+  .contact-wrap{ display:grid; grid-template-columns:1.1fr .9fr; gap:60px; }
+  @media (max-width:820px){ .contact-wrap{ grid-template-columns:1fr; } }
+  .contact-card{ border:1px solid var(--line); background:var(--panel); padding:32px; }
+  .contact-card .k{ font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:.08em; margin-bottom:8px; }
+  .contact-card .v{ font-size:17px; margin-bottom:24px; }
+  .contact-card .v:last-child{ margin-bottom:0; }
+  .btn{ font-family:var(--mono); font-size:14px; padding:14px 24px; border:1px solid var(--text); background:transparent; color:var(--text); cursor:pointer; text-decoration:none; display:inline-block; transition:all .2s; }
+  .btn.primary{ background:var(--amber); border-color:var(--amber); color:#12100a; font-weight:600; }
+  .btn:hover{ background:var(--text); color:var(--bg); }
+  .btn.primary:hover{ background:#f3b658; border-color:#f3b658; color:#12100a; }
+  .contact-grid{ display:flex; gap:20px; flex-wrap:wrap; margin-top:10px; }
+
+  footer{ padding:32px 8vw; font-family:var(--mono); font-size:12px; color:var(--muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; border-top:1px solid var(--line); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand" onclick="goHome()">
+    <span class="brand-dot"></span>SUNIL OBI
+  </div>
+  <div class="crumbs" id="crumbs">
+    <button class="back-btn" id="backBtn" onclick="goHome()">← Back</button>
+    <span id="crumbCur"></span>
+  </div>
+  <div class="navlinks">
+    <button onclick="openView('experience')">Experience</button>
+    <button onclick="openView('case-study')">Case Study</button>
+    <button onclick="openView('operations')">Operations</button>
+    <button onclick="openView('stack')">Toolchain</button>
+    <button onclick="openView('contact')">Contact</button>
+  </div>
+</div>
+
+<div class="stage">
+
+  <!-- ============ HOME ============ -->
+  <div class="view active" id="view-home">
+
+    <section class="hero">
+      <div class="section-inner">
+        <div class="status-line"><span class="status-dot"></span>AVAILABLE — OPEN TO SENIOR DEVOPS / CLOUD / PLATFORM ROLES</div>
+        <h1 class="hero-name">Sunil Obi</h1>
+        <div class="hero-role">DEVOPS · CLOUD · PLATFORM ENGINEERING</div>
+        <p class="hero-desc">I design, automate, integrate and operate complex engineering environments — from embedded CI/CD toolchains to multi-cloud Kubernetes platforms — so teams ship faster and systems stay reliable under real production load.</p>
+      </div>
+      <div class="domain-row">
+        <div class="domain" onclick="openView('operations')">
+          <span class="domain-arrow">→</span>
+          <div class="domain-k">DOMAIN 01</div>
+          <div class="domain-name">Cloud</div>
+          <div class="domain-sub">AWS · Azure · On-prem · Kubernetes</div>
+        </div>
+        <div class="domain" onclick="openView('case-study')">
+          <span class="domain-arrow">→</span>
+          <div class="domain-k">DOMAIN 02</div>
+          <div class="domain-name">Automation</div>
+          <div class="domain-sub">CI/CD · IaC · Python · Toolchain integration</div>
+        </div>
+        <div class="domain" onclick="openView('operations')">
+          <span class="domain-arrow">→</span>
+          <div class="domain-k">DOMAIN 03</div>
+          <div class="domain-name">Operations</div>
+          <div class="domain-sub">ITSM · Incident/RCA · Governance</div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-inner">
+        <div class="eyebrow"><span class="dash"></span>Approach</div>
+        <h2 style="max-width:26ch;">Give me a complex engineering environment, and I can understand, automate, integrate, and operate it.</h2>
+        <p class="lede">My work sits at the intersection of software delivery and infrastructure operations — building the pipelines that ship code, and running the platforms that code lives on. Explore how below.</p>
+
+        <div class="enter-grid">
+          <div class="enter-card" onclick="openView('experience')">
+            <div>
+              <div class="enter-top">01 · CAREER PATH</div>
+              <h3>Experience</h3>
+              <p>Three roles, one continuous thread — from infrastructure, to automation, to platform engineering.</p>
+            </div>
+            <div class="go">Open timeline →</div>
+          </div>
+          <div class="enter-card" onclick="openView('case-study')">
+            <div>
+              <div class="enter-top">02 · FLAGSHIP PROJECT</div>
+              <h3>Case Study</h3>
+              <p>An interactive walkthrough of the Sonacomstar CI/CD automation pipeline.</p>
+            </div>
+            <div class="go">Open schematic →</div>
+          </div>
+          <div class="enter-card" onclick="openView('operations')">
+            <div>
+              <div class="enter-top">03 · CURRENT ROLE</div>
+              <h3>Operations</h3>
+              <p>Running multi-cloud Kubernetes at Cognizant — lifecycle, incidents, RCA.</p>
+            </div>
+            <div class="go">Open platform map →</div>
+          </div>
+          <div class="enter-card" onclick="openView('stack')">
+            <div>
+              <div class="enter-top">04 · TOOLCHAIN</div>
+              <h3>Technology</h3>
+              <p>The full technology landscape, grouped by category.</p>
+            </div>
+            <div class="go">Open stack →</div>
+          </div>
+          <div class="enter-card" onclick="openView('contact')">
+            <div>
+              <div class="enter-top">05 · REACH OUT</div>
+              <h3>Contact</h3>
+              <p>Email, résumé, GitHub and LinkedIn — and what I'm looking for next.</p>
+            </div>
+            <div class="go">Open contact →</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div>© 2026 Sunil Obi</div>
+      <div>BUILT AS A STATIC SITE · DEPLOY-READY</div>
+    </footer>
+  </div>
+
+  <!-- ============ EXPERIENCE (nested page) ============ -->
+  <div class="view" id="view-experience">
+    <section>
+      <div class="section-inner">
+        <div class="eyebrow"><span class="dash"></span>Career Path</div>
+        <h2>Infrastructure → Automation → Platform Engineering</h2>
+        <p class="lede">Three roles, one continuous thread: each one handed more of the stack over to me — from operating infrastructure to owning delivery automation to running enterprise-scale platforms. Click a role to jump to its deep dive.</p>
+
+        <div class="timeline">
+          <div class="era" onclick="openView('home')">
+            <div class="era-years">2019 — 2023<br>Jumbotail</div>
+            <div>
+              <div class="era-org">Jumbotail</div>
+              <div class="era-title">FOUNDATION — INFRASTRUCTURE &amp; CONTINUOUS DELIVERY</div>
+              <p class="era-summary">Operated AWS infrastructure and continuous-delivery pipelines for a B2B e-commerce platform — the foundation that later automation and platform work was built on.</p>
+              <div class="tag-row">
+                <span class="tag">AWS · EC2 / VPC / IAM / S3</span>
+                <span class="tag">Ansible</span>
+                <span class="tag">Docker</span>
+                <span class="tag">Jenkins / Git</span>
+                <span class="tag">Release &amp; deployment support</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="era" onclick="openView('case-study')">
+            <div class="era-years">2023 — 2025<br>MicroGenesis</div>
+            <div>
+              <div class="era-org">MicroGenesis <span class="era-more">→ view case study</span></div>
+              <div class="era-title">CI/CD, TOOLCHAIN INTEGRATION &amp; CUSTOMER-FACING ENGINEERING</div>
+              <p class="era-summary">Moved from infrastructure into DevOps and integration engineering — building Jenkins-orchestrated pipelines across enterprise ALM and embedded/automotive toolchains, and taking solutions in front of customers as POCs.</p>
+              <div class="tag-row">
+                <span class="tag">Jenkins orchestration</span>
+                <span class="tag">Codebeamer / Git / SVN / IBM EWM</span>
+                <span class="tag">Vector toolchain</span>
+                <span class="tag">CANoe CLI automation</span>
+                <span class="tag">Python / Groovy / Shell</span>
+                <span class="tag">Customer POCs &amp; demos</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="era" onclick="openView('operations')">
+            <div class="era-years">2025 — Present<br>Cognizant</div>
+            <div>
+              <div class="era-org">Cognizant <span class="era-more">→ view platform map</span></div>
+              <div class="era-title">ENTERPRISE PLATFORM OPERATIONS &amp; RELIABILITY</div>
+              <p class="era-summary">Operate and govern multi-cloud Kubernetes platforms — AWS, Azure and on-prem — including cluster lifecycle, incident response, root-cause analysis and knowledge management, leading a 13-person operations team.</p>
+              <div class="tag-row">
+                <span class="tag">AWS EKS / ECS</span>
+                <span class="tag">Azure AKS</span>
+                <span class="tag">Nirmata multi-cloud management</span>
+                <span class="tag">ITSM / ServiceNow / Jira</span>
+                <span class="tag">RCA · 5 Whys · CAPA</span>
+                <span class="tag">Team &amp; shift leadership</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============ CASE STUDY (nested page) ============ -->
+  <div class="view" id="view-case-study">
+    <section>
+      <div class="section-inner">
+        <div class="case-header">
+          <div>
+            <div class="eyebrow"><span class="dash"></span>Flagship Case Study</div>
+            <h2>Automating an Embedded Engineering Delivery Pipeline</h2>
+          </div>
+          <div class="case-tag">MicroGenesis · Sonacomstar</div>
+        </div>
+        <p class="lede" style="margin-bottom:36px;">A CI/CD automation case study integrating enterprise ALM, source control and automotive engineering toolchains into a single Jenkins-driven delivery workflow. Click a node to see what it did.</p>
+
+        <div class="schematic">
+          <div class="schem-row">
+            <div class="node" data-d="Requirements tracked in Codebeamer, the enterprise ALM layer feeding every downstream repository.">Codebeamer<br><span style="color:var(--muted)">ALM</span></div>
+          </div>
+          <div class="connector">│</div>
+          <div class="schem-row">
+            <div class="node" data-d="Source distributed across Git, SVN and IBM EWM depending on the team and legacy tooling — all converging into the same pipeline.">Git</div>
+            <div class="node" data-d="Source distributed across Git, SVN and IBM EWM depending on the team and legacy tooling — all converging into the same pipeline.">SVN</div>
+            <div class="node" data-d="Source distributed across Git, SVN and IBM EWM depending on the team and legacy tooling — all converging into the same pipeline.">IBM EWM</div>
+          </div>
+          <div class="connector">└──────┬──────┘</div>
+          <div class="schem-row">
+            <div class="node hub" data-d="Jenkins sits as the orchestration layer: commit and source checkout, build, automated test, quality gates and result collection all run through it.">JENKINS<br>Orchestrator</div>
+          </div>
+          <div class="connector">┌──────┼──────┐</div>
+          <div class="schem-row">
+            <div class="node" data-d="Custom Python automation to remove manual engineering steps — environment preparation, tool control, and workflow orchestration around the core pipeline.">Python<br>Automation</div>
+            <div class="node" data-d="Designed and implemented CLI-driven Vector toolchain integration, triggering engineering validation automatically as part of the pipeline rather than manually.">Vector<br>Plugin</div>
+            <div class="node" data-d="Designed and implemented CLI-driven CANoe automation from the ground up, integrating simulation/test execution into the CI/CD workflow to eliminate manual triggering.">CANoe<br>CLI</div>
+          </div>
+          <div class="connector">└──────┬──────┘</div>
+          <div class="schem-row">
+            <div class="node" data-d="Results from Python, Vector and CANoe stages are collected, checked against quality gates, and used to pass or fail the build.">Validation &amp;<br>Quality Gate</div>
+          </div>
+          <div class="connector">│</div>
+          <div class="schem-row">
+            <div class="node hub" data-d="A passing build produces build/test reports and artifacts, and moves to release — the point where manual engineering steps have been replaced end-to-end by the pipeline.">Release</div>
+          </div>
+          <div class="node-detail" id="nodeDetail"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============ OPERATIONS (nested page) ============ -->
+  <div class="view" id="view-operations">
+    <section>
+      <div class="section-inner">
+        <div class="eyebrow"><span class="dash"></span>Current Focus</div>
+        <h2>Enterprise Kubernetes Operations</h2>
+        <p class="lede">Running a multi-cloud Kubernetes platform across AWS EKS, Azure AKS and on-prem clusters, managed through Nirmata — covering the full lifecycle from onboarding to decommission, not just day-to-day firefighting.</p>
+
+        <div class="split">
+          <div>
+            <h4>PLATFORM FOOTPRINT</h4>
+            <div class="tag-row">
+              <span class="tag">AWS · EKS / ECS / EC2</span>
+              <span class="tag">Azure · AKS</span>
+              <span class="tag">On-prem Kubernetes</span>
+              <span class="tag">Nirmata management layer</span>
+              <span class="tag">Prometheus / Grafana</span>
+            </div>
+          </div>
+          <div>
+            <h4>CLUSTER LIFECYCLE</h4>
+            <p style="color:var(--muted); font-size:14.5px;">Plan → Onboard (IQ/OQ, change approval via Techvision Jira) → Configure → Operate → Monitor → Upgrade → Scale → Troubleshoot → Decommission.</p>
+          </div>
+        </div>
+
+        <h4 style="font-family:var(--mono); font-size:13px; color:var(--amber); margin-top:56px; margin-bottom:4px;">TROUBLESHOOTING LIBRARY</h4>
+        <p class="lede" style="margin-bottom:8px;">A working reference, not a list of tools — the actual investigation path for recurring platform symptoms.</p>
+        <table class="matrix">
+          <thead><tr><th>Symptom</th><th>Investigation path</th></tr></thead>
+          <tbody>
+            <tr><td class="sym">CrashLoopBackOff</td><td class="path">Pod events → logs → configuration → dependency</td></tr>
+            <tr><td class="sym">Database connectivity failure</td><td class="path">DNS → network → credentials → DB health</td></tr>
+            <tr><td class="sym">API server / node communication</td><td class="path">Node status → networking → certificates → control plane</td></tr>
+            <tr><td class="sym">ImagePullBackOff</td><td class="path">Registry connectivity → firewall → authentication → image/tag</td></tr>
+            <tr><td class="sym">Node pressure</td><td class="path">CPU → memory → disk → eviction</td></tr>
+            <tr><td class="sym">Application unavailable</td><td class="path">Ingress → service → endpoint → pod</td></tr>
+          </tbody>
+        </table>
+
+        <h4 style="font-family:var(--mono); font-size:13px; color:var(--amber); margin-top:56px; margin-bottom:14px;">RCA &amp; KNOWLEDGE LOOP</h4>
+        <p class="lede">Incident → root cause (5 Whys / Fishbone) → corrective &amp; preventive action → documented as a knowledge-base article, closing the loop so the same failure resolves faster next time. Currently own <strong style="color:var(--text)">45+ knowledge-base articles</strong> in active use across the team.</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============ STACK (nested page) ============ -->
+  <div class="view" id="view-stack">
+    <section>
+      <div class="section-inner">
+        <div class="eyebrow"><span class="dash"></span>Toolchain</div>
+        <h2>Technology landscape</h2>
+        <div class="stack-grid">
+          <div class="stack-cat"><h4>CLOUD</h4><div class="stack-items"><span class="stack-item">AWS</span><span class="stack-item">Azure</span></div></div>
+          <div class="stack-cat"><h4>CONTAINER PLATFORM</h4><div class="stack-items"><span class="stack-item">Kubernetes</span><span class="stack-item">Docker</span><span class="stack-item">EKS</span><span class="stack-item">AKS</span><span class="stack-item">Nirmata</span></div></div>
+          <div class="stack-cat"><h4>AUTOMATION</h4><div class="stack-items"><span class="stack-item">Jenkins</span><span class="stack-item">Terraform</span><span class="stack-item">Ansible</span><span class="stack-item">Python</span></div></div>
+          <div class="stack-cat"><h4>SOURCE CONTROL</h4><div class="stack-items"><span class="stack-item">Git</span><span class="stack-item">SVN</span><span class="stack-item">IBM EWM</span><span class="stack-item">Codebeamer</span></div></div>
+          <div class="stack-cat"><h4>OPERATIONS</h4><div class="stack-items"><span class="stack-item">ServiceNow</span><span class="stack-item">Jira</span><span class="stack-item">Confluence</span></div></div>
+          <div class="stack-cat"><h4>OBSERVABILITY</h4><div class="stack-items"><span class="stack-item">Prometheus</span><span class="stack-item">Grafana</span><span class="stack-item">CloudWatch</span></div></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============ CONTACT (nested page — full detail, not just a link) ============ -->
+  <div class="view" id="view-contact">
+    <section>
+      <div class="section-inner">
+        <div class="eyebrow"><span class="dash"></span>Get in touch</div>
+        <h2>Let's talk about your platform.</h2>
+        <p class="lede" style="margin-bottom:40px;">Open to senior DevOps, Cloud and Platform Engineering roles — remote or Bengaluru-based.</p>
+
+        <div class="contact-wrap">
+          <div class="contact-card">
+            <div class="k">EMAIL</div>
+            <div class="v"><a href="mailto:your.email@example.com">your.email@example.com</a></div>
+            <div class="k">LOCATION</div>
+            <div class="v">Bengaluru, India · open to remote</div>
+            <div class="k">CURRENTLY</div>
+            <div class="v">Enterprise Platform Operations &amp; Reliability, Cognizant</div>
+            <div class="k">LOOKING FOR</div>
+            <div class="v">Senior DevOps / Cloud / Platform Engineering roles — teams running multi-cloud Kubernetes or CI/CD at scale.</div>
+          </div>
+          <div>
+            <div class="contact-grid">
+              <a class="btn primary" href="mailto:your.email@example.com">Email me</a>
+              <a class="btn" href="#" target="_blank">Download résumé</a>
+              <a class="btn" href="https://github.com/" target="_blank">GitHub</a>
+              <a class="btn" href="https://linkedin.com/" target="_blank">LinkedIn</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+</div>
+
+<script>
+  const labels = {
+    'home': '',
+    'experience': 'Experience',
+    'case-study': 'Case Study',
+    'operations': 'Operations',
+    'stack': 'Toolchain',
+    'contact': 'Contact'
+  };
+
+  function openView(name){
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    const target = document.getElementById('view-' + name);
+    if(target) target.classList.add('active');
+    window.scrollTo({top:0, behavior:'instant' in document.documentElement.style ? 'instant' : 'auto'});
+    document.getElementById('backBtn').classList.toggle('show', name !== 'home');
+    document.getElementById('crumbCur').textContent = labels[name] ? '/ ' + labels[name] : '';
+    history.replaceState(null, '', name === 'home' ? '#' : '#' + name);
+  }
+  function goHome(){ openView('home'); }
+
+  // deep-link support
+  window.addEventListener('DOMContentLoaded', ()=>{
+    const h = location.hash.replace('#','');
+    if(h && document.getElementById('view-'+h)) openView(h); else openView('home');
+  });
+  window.addEventListener('hashchange', ()=>{
+    const h = location.hash.replace('#','');
+    openView(h && document.getElementById('view-'+h) ? h : 'home');
+  });
+
+  // schematic node detail toggle
+  document.querySelectorAll('.node').forEach(node=>{
+    node.addEventListener('click', ()=>{
+      const detail = document.getElementById('nodeDetail');
+      const already = node.classList.contains('open');
+      document.querySelectorAll('.node').forEach(n=>n.classList.remove('open'));
+      if(already){
+        detail.classList.remove('show');
+        detail.textContent = '';
+      } else {
+        node.classList.add('open');
+        detail.textContent = node.getAttribute('data-d');
+        detail.classList.add('show');
+      }
+    });
+  });
+</script>
+
+</body>
+</html>
